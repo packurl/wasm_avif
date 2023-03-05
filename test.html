@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<script type="module">
+const blob=await(await fetch('jellyfish.jpg')).blob();
+// const resizeQuality='high';
+// const resizeWidth=1080;
+// const resizeHeight=720;
+// const image=await createImageBitmap(blob,{resizeQuality,resizeWidth,resizeHeight});
+const canvas=new OffscreenCanvas(1,1);
+const url=URL.createObjectURL(blob);
+const image=new Image();
+await new Promise((r)=>{
+  image.onload=r;
+  image.src=url;
+});
+canvas.width=image.width;
+canvas.height=image.height;
+const context=canvas.getContext('2d');
+context.drawImage(image,0,0);
+const data=context.getImageData(0,0,canvas.width,canvas.height);
+console.log(data.colorSpace);
+console.log(data);
+console.log(data.data);
+console.log(data.width);
+console.log(data.height);
+// const tmp=new Blob([data.data],{type:'application/octet-stream'});
+// const a=document.createElement('a');
+// a.download='data.bin';
+// a.href=URL.createObjectURL(tmp);
+// a.textContent='Download';
+// document.body.appendChild(a);
+const {avif}=await import('./avif.mjs');
+// const mod=await import('./avif.js');
+// const {avif_from_imagedata:avif}=await mod.default();
+const bytes=await avif(new Uint8Array(data.data),data.width,data.height,50.0,6);
+URL.revokeObjectURL(url);
+console.log(bytes);
+const b=new Blob([bytes],{type:'image/avif'});
+const img=document.createElement('img');
+img.src=URL.createObjectURL(b);
+document.body.appendChild(img);
+</script>
+</body>
+</html>
