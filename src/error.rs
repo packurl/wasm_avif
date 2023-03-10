@@ -6,5 +6,5 @@ pub struct EncodingErrorDetail; // maybe later
 pub enum Error {
     TooFewPixels,
     Unsupported(&'static str),
-    EncodingError,
+    EncodingError(String),
 }

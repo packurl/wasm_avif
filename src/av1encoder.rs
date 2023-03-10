@@ -1,6 +1,5 @@
 #![allow(deprecated)]
 use crate::error::Error;
-use imgref::Img;
 use rav1e::prelude::*;
 use rgb::RGBA8;
 
@@ -74,16 +73,25 @@ impl Encoder {
     /// ```
     ///
     /// returns AVIF file, size of color metadata
+    // #[inline]
+    // pub fn encode_rgb(&self, buffer: Img<&[RGBA8]>) -> Result<EncodedImage, Error> {
+    //     self.encode_rgb_internal(buffer.width(), buffer.height(), buffer.pixels())
+    // }
     #[inline]
-    pub fn encode_rgb(&self, buffer: Img<&[RGBA8]>) -> Result<EncodedImage, Error> {
-        self.encode_rgb_internal(buffer.width(), buffer.height(), buffer.pixels())
-    }
-
-    fn encode_rgb_internal(
+    pub fn encode_rgb(
         &self,
+        buffer: &[RGBA8],
         width: usize,
         height: usize,
-        pixels: impl Iterator<Item = RGBA8> + Send + Sync,
+    ) -> Result<EncodedImage, Error> {
+        self.encode_rgb_internal(width, height, buffer.iter())
+    }
+
+    fn encode_rgb_internal<'a>(
+        &'a self,
+        width: usize,
+        height: usize,
+        pixels: impl Iterator<Item = &'a RGBA8> + Send + Sync,
     ) -> Result<EncodedImage, Error> {
         let planes = pixels.map(|px| {
             // let (y, u, v) = rgb_to_10_bit_ycbcr(px.rgb(), BT601);
@@ -95,6 +103,7 @@ impl Encoder {
             width,
             height,
             planes,
+            // PixelRange::Full,
             PixelRange::Full,
             MatrixCoefficients::BT601,
         )
@@ -492,11 +501,12 @@ fn encode_to_av1<P: rav1e::Pixel>(
 ) -> Result<Vec<u8>, Error> {
     let mut ctx: Context<P> = rav1e_config(p)
         .new_context()
-        .map_err(|_| Error::EncodingError)?;
+        .map_err(|e| Error::EncodingError(format!("Invalid Config: {}", e.to_string())))?;
     let mut frame = ctx.new_frame();
 
     init(&mut frame)?;
-    ctx.send_frame(frame).map_err(|_| Error::EncodingError)?;
+    ctx.send_frame(frame)
+        .map_err(|e| Error::EncodingError(format!("Send Frame: {}", e.to_string())))?;
     ctx.flush();
 
     let mut out = Vec::new();
@@ -509,7 +519,8 @@ fn encode_to_av1<P: rav1e::Pixel>(
                 _ => continue,
             },
             Err(EncoderStatus::Encoded) | Err(EncoderStatus::LimitReached) => break,
-            Err(err) => Err(err).map_err(|_| Error::EncodingError)?,
+            Err(err) => Err(err)
+                .map_err(|e| Error::EncodingError(format!("Receive Packet: {}", e.to_string())))?,
         }
     }
     Ok(out)
