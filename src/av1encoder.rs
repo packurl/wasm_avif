@@ -83,29 +83,30 @@ impl Encoder {
         buffer: &[RGBA8],
         width: usize,
         height: usize,
+        hdr: bool,
     ) -> Result<EncodedImage, Error> {
-        self.encode_rgb_internal(width, height, buffer.iter())
+        self.encode_rgb_internal(width, height, if hdr { 10u8 } else { 8u8 }, buffer.iter())
     }
 
     fn encode_rgb_internal<'a>(
         &'a self,
         width: usize,
         height: usize,
+        bit_depth: u8,
         pixels: impl Iterator<Item = &'a RGBA8> + Send + Sync,
     ) -> Result<EncodedImage, Error> {
         let planes = pixels.map(|px| {
-            // let (y, u, v) = rgb_to_10_bit_ycbcr(px.rgb(), BT601);
-            let (y, u, v) = rgb_to_8_bit_ycbcr(px.rgb(), BT601);
+            let (y, u, v) = rgb_to_ycbcr(px.rgb(), bit_depth, BT601);
             [y, u, v]
         });
-        // self.encode_raw_planes_10_bit(
-        self.encode_raw_planes_8_bit(
+        self.encode_raw_planes(
             width,
             height,
             planes,
             // PixelRange::Full,
             PixelRange::Full,
             MatrixCoefficients::BT601,
+            bit_depth,
         )
     }
 
@@ -116,51 +117,6 @@ impl Encoder {
     /// If there's no alpha, use `None::<[_; 0]>`.
     ///
     /// returns AVIF file, size of color metadata, size of alpha metadata overhead
-    #[inline]
-    pub fn encode_raw_planes_8_bit(
-        &self,
-        width: usize,
-        height: usize,
-        planes: impl IntoIterator<Item = [u8; 3]> + Send,
-        color_pixel_range: PixelRange,
-        matrix_coefficients: MatrixCoefficients,
-    ) -> Result<EncodedImage, Error> {
-        self.encode_raw_planes(
-            width,
-            height,
-            planes,
-            color_pixel_range,
-            matrix_coefficients,
-            8,
-        )
-    }
-
-    // /// Encodes AVIF from 3 planar channels that are in the color space described by `matrix_coefficients`,
-    // /// with sRGB transfer characteristics and color primaries.
-    // ///
-    // /// The pixels are 10-bit (values `0.=1023`).
-    // ///
-    // /// returns AVIF file, size of color metadata
-    // #[inline]
-    // pub fn encode_raw_planes_10_bit(
-    //     &self,
-    //     width: usize,
-    //     height: usize,
-    //     planes: impl IntoIterator<Item = [u16; 3]> + Send,
-    //     color_pixel_range: PixelRange,
-    //     matrix_coefficients: MatrixCoefficients,
-    // ) -> Result<EncodedImage, Error> {
-    //     self.encode_raw_planes(
-    //         width,
-    //         height,
-    //         planes,
-    //         color_pixel_range,
-    //         matrix_coefficients,
-    //         10,
-    //     )
-    // }
-
-    #[inline(never)]
     fn encode_raw_planes<P: rav1e::Pixel + Default>(
         &self,
         width: usize,
@@ -222,29 +178,18 @@ impl Encoder {
 const BT601: [f32; 3] = [0.2990, 0.5870, 0.1140];
 
 #[inline(always)]
-fn rgb_to_ycbcr(px: rgb::RGB<u8>, depth: u8, matrix: [f32; 3]) -> (f32, f32, f32) {
+fn rgb_to_ycbcr(px: rgb::RGB<u8>, depth: u8, matrix: [f32; 3]) -> (u8, u8, u8) {
+    let r = f32::from(px.r);
+    let g = f32::from(px.g);
+    let b = f32::from(px.b);
     let max_value = ((1 << depth) - 1) as f32;
     let scale = max_value / 255.;
     let shift = (max_value * 0.5).round();
-    let y = scale * matrix[0] * f32::from(px.r)
-        + scale * matrix[1] * f32::from(px.g)
-        + scale * matrix[2] * f32::from(px.b);
-    let cb = (f32::from(px.b) * scale - y).mul_add(0.5 / (1. - matrix[2]), shift);
-    let cr = (f32::from(px.r) * scale - y).mul_add(0.5 / (1. - matrix[0]), shift);
-    (y.round(), cb.round(), cr.round())
+    let y = scale * matrix[0] * r + scale * matrix[1] * g + scale * matrix[2] * b;
+    let cb = (b * scale - y).mul_add(0.5 / (1. - matrix[2]), shift);
+    let cr = (r * scale - y).mul_add(0.5 / (1. - matrix[0]), shift);
+    (y.round() as u8, cb.round() as u8, cr.round() as u8)
 }
-
-#[inline(always)]
-fn rgb_to_8_bit_ycbcr(px: rgb::RGB<u8>, matrix: [f32; 3]) -> (u8, u8, u8) {
-    let (y, u, v) = rgb_to_ycbcr(px, 8, matrix);
-    (y as u8, u as u8, v as u8)
-}
-
-// #[inline(always)]
-// fn rgb_to_10_bit_ycbcr(px: rgb::RGB<u8>, matrix: [f32; 3]) -> (u16, u16, u16) {
-//     let (y, u, v) = rgb_to_ycbcr(px, 10, matrix);
-//     (y as u16, u as u16, v as u16)
-// }
 
 fn quality_to_quantizer(quality: f32) -> u8 {
     let q = quality / 100.;
@@ -414,7 +359,6 @@ struct Av1EncodeConfig {
     pub bit_depth: usize,
     pub quantizer: usize,
     pub speed: SpeedTweaks,
-    /// 0 means num_cpus
     pub pixel_range: PixelRange,
     pub chroma_sampling: ChromaSampling,
     pub color_description: Option<ColorDescription>,
@@ -494,7 +438,6 @@ fn init_frame_3<P: rav1e::Pixel + Default>(
     Ok(())
 }
 
-#[inline(never)]
 fn encode_to_av1<P: rav1e::Pixel>(
     p: &Av1EncodeConfig,
     init: impl FnOnce(&mut Frame<P>) -> Result<(), Error>,

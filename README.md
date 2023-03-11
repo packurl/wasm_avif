@@ -13,5 +13,4 @@ Compilation:
 Dependencies:
 - [avif-serialize](https://github.com/kornelski/avif-serialize) ([BSD3 License](https://github.com/kornelski/avif-serialize/blob/main/LICENSE))
 - [rav1e](https://github.com/xiph/rav1e) ([BSD2 License](https://github.com/xiph/rav1e/blob/master/LICENSE))
-- [rgb](https://github.com/kornelski/rust-rgb) ([MIT License](https://github.com/kornelski/rust-rgb/blob/main/LICENSE))
 - [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen) ([MIT License](https://github.com/r
