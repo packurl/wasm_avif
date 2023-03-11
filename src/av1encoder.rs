@@ -1,20 +1,7 @@
-#![allow(deprecated)]
 use crate::error::Error;
 use rav1e::prelude::*;
-use rgb::RGBA8;
-
-/// The newly-created image file + extra info FYI
-#[non_exhaustive]
-#[derive(Clone)]
-pub struct EncodedImage {
-    /// AVIF (HEIF+AV1) encoded image data
-    pub avif_file: Vec<u8>,
-    /// FYI: number of bytes of AV1 payload used for the color
-    pub color_byte_size: usize,
-}
 
 /// Encoder config builder
-#[derive(Debug, Clone)]
 pub struct Encoder {
     /// 0-255 scale
     quantizer: u8,
@@ -34,8 +21,6 @@ impl Encoder {
     }
 
     /// Quality `1..=100`. Panics if out of range.
-    #[inline(always)]
-    #[track_caller]
     #[must_use]
     pub fn with_quality(mut self, quality: f32) -> Self {
         assert!(quality >= 1. && quality <= 100.);
@@ -45,8 +30,6 @@ impl Encoder {
 
     /// `1..=10`. 1 = very very slow, but max compression.
     /// 10 = quick, but larger file sizes and lower quality.
-    #[inline(always)]
-    #[track_caller]
     #[must_use]
     pub fn with_speed(mut self, speed: u8) -> Self {
         assert!(speed >= 1 && speed <= 10);
@@ -72,31 +55,16 @@ impl Encoder {
     /// let pixels_rgb = pixels_u8.as_rgb();
     /// ```
     ///
-    /// returns AVIF file, size of color metadata
-    // #[inline]
-    // pub fn encode_rgb(&self, buffer: Img<&[RGBA8]>) -> Result<EncodedImage, Error> {
-    //     self.encode_rgb_internal(buffer.width(), buffer.height(), buffer.pixels())
-    // }
-    #[inline]
-    pub fn encode_rgb(
-        &self,
-        buffer: &[RGBA8],
-        width: usize,
-        height: usize,
-        hdr: bool,
-    ) -> Result<EncodedImage, Error> {
-        self.encode_rgb_internal(width, height, if hdr { 10u8 } else { 8u8 }, buffer.iter())
-    }
-
-    fn encode_rgb_internal<'a>(
+    /// returns AVIF file
+    pub fn encode_rgb<'a>(
         &'a self,
         width: usize,
         height: usize,
         bit_depth: u8,
-        pixels: impl Iterator<Item = &'a RGBA8> + Send + Sync,
-    ) -> Result<EncodedImage, Error> {
+        pixels: impl Iterator<Item = &'a [u8]> + Send + Sync,
+    ) -> Result<Vec<u8>, Error> {
         let planes = pixels.map(|px| {
-            let (y, u, v) = rgb_to_ycbcr(px.rgb(), bit_depth, BT601);
+            let (y, u, v) = rgb_to_ycbcr(px, bit_depth, BT601);
             [y, u, v]
         });
         self.encode_raw_planes(
@@ -116,7 +84,7 @@ impl Encoder {
     /// Alpha always uses full range. Chroma subsampling is not supported, and it's a bad idea for AVIF anyway.
     /// If there's no alpha, use `None::<[_; 0]>`.
     ///
-    /// returns AVIF file, size of color metadata, size of alpha metadata overhead
+    /// returns AVIF file
     fn encode_raw_planes<P: rav1e::Pixel + Default>(
         &self,
         width: usize,
@@ -125,7 +93,7 @@ impl Encoder {
         color_pixel_range: PixelRange,
         matrix_coefficients: MatrixCoefficients,
         bit_depth: u8,
-    ) -> Result<EncodedImage, Error> {
+    ) -> Result<Vec<u8>, Error> {
         let color_description = Some(ColorDescription {
             transfer_characteristics: TransferCharacteristics::SRGB,
             color_primaries: ColorPrimaries::BT709, // sRGB-compatible
@@ -166,22 +134,17 @@ impl Encoder {
                 _ => return Err(Error::Unsupported("matrix coefficients")),
             })
             .to_vec(&color, None, width as u32, height as u32, bit_depth);
-        let color_byte_size = color.len();
-        Ok(EncodedImage {
-            avif_file,
-            color_byte_size,
-        })
+        Ok(avif_file)
     }
 }
 
 // const REC709: [f32; 3] = [0.2126, 0.7152, 0.0722];
 const BT601: [f32; 3] = [0.2990, 0.5870, 0.1140];
 
-#[inline(always)]
-fn rgb_to_ycbcr(px: rgb::RGB<u8>, depth: u8, matrix: [f32; 3]) -> (u8, u8, u8) {
-    let r = f32::from(px.r);
-    let g = f32::from(px.g);
-    let b = f32::from(px.b);
+fn rgb_to_ycbcr(px: &[u8], depth: u8, matrix: [f32; 3]) -> (u8, u8, u8) {
+    let r = f32::from(px[0]);
+    let g = f32::from(px[1]);
+    let b = f32::from(px[2]);
     let max_value = ((1 << depth) - 1) as f32;
     let scale = max_value / 255.;
     let shift = (max_value * 0.5).round();
@@ -405,7 +368,7 @@ fn rav1e_config(p: &Av1EncodeConfig) -> Config {
     })
 }
 
-fn init_frame_3<P: rav1e::Pixel + Default>(
+fn init_frame_3<P: Pixel + Default>(
     width: usize,
     height: usize,
     planes: impl IntoIterator<Item = [P; 3]> + Send,
@@ -438,7 +401,7 @@ fn init_frame_3<P: rav1e::Pixel + Default>(
     Ok(())
 }
 
-fn encode_to_av1<P: rav1e::Pixel>(
+fn encode_to_av1<P: Pixel>(
     p: &Av1EncodeConfig,
     init: impl FnOnce(&mut Frame<P>) -> Result<(), Error>,
 ) -> Result<Vec<u8>, Error> {

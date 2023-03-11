@@ -10,7 +10,6 @@ crate-type = ["cdylib",'rlib']
 wasm-bindgen = "0.2"
 avif-serialize = "0.8"
 rav1e = { version = "0.6", default-features = false, features = ["wasm"] }
-rgb = "0.8"
 
 [profile.release]
 opt-level = "s"
@@ -18,4 +17,3 @@ lto = true
 
 [dev-dependencies]
 avif-parse = "1.0"
-

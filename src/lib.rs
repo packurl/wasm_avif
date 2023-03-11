@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 mod av1encoder;
 mod error;
 pub use av1encoder::Encoder;
-use rgb::AsPixels;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,11 +18,15 @@ pub fn avif_from_imagedata(
     quality: f32,
     speed: u8,
 ) -> Vec<u8> {
-    let res = Encoder::new()
+    Encoder::new()
         .with_quality(quality)
         .with_speed(speed)
-        .encode_rgb(rgba.as_pixels(), width, height, hdr)
+        .encode_rgb(
+            width,
+            height,
+            if hdr { 10u8 } else { 8u8 },
+            rgba.chunks_exact(4),
+        )
         .map_err(|e| log(format!("{:?}", e).as_str()))
-        .unwrap();
-    res.avif_file
+        .unwrap()
 }
