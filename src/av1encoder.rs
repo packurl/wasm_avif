@@ -55,11 +55,11 @@ impl Encoder {
         )
     }
 
-    fn encode_raw_planes<P: rav1e::Pixel + Default>(
+    fn encode_raw_planes(
         &self,
         width: usize,
         height: usize,
-        planes: impl IntoIterator<Item = [P; 3]> + Send,
+        planes: impl IntoIterator<Item = [u8; 3]> + Send,
         color_pixel_range: PixelRange,
         matrix_coefficients: MatrixCoefficients,
     ) -> Result<Vec<u8>, Error> {
@@ -70,7 +70,7 @@ impl Encoder {
         });
 
         let encode_color = move || {
-            encode_to_av1::<P>(
+            encode_to_av1(
                 &Av1EncodeConfig {
                     width,
                     height,
@@ -324,11 +324,11 @@ fn rav1e_config(p: &Av1EncodeConfig) -> Config {
     })
 }
 
-fn init_frame_3<P: Pixel + Default>(
+fn init_frame_3(
     width: usize,
     height: usize,
-    planes: impl IntoIterator<Item = [P; 3]> + Send,
-    frame: &mut Frame<P>,
+    planes: impl IntoIterator<Item = [u8; 3]> + Send,
+    frame: &mut Frame<u8>,
 ) -> Result<(), Error> {
     let mut f = frame.planes.iter_mut();
     let mut planes = planes.into_iter();
@@ -357,11 +357,11 @@ fn init_frame_3<P: Pixel + Default>(
     Ok(())
 }
 
-fn encode_to_av1<P: Pixel>(
+fn encode_to_av1(
     p: &Av1EncodeConfig,
-    init: impl FnOnce(&mut Frame<P>) -> Result<(), Error>,
+    init: impl FnOnce(&mut Frame<u8>) -> Result<(), Error>,
 ) -> Result<Vec<u8>, Error> {
-    let mut ctx: Context<P> = rav1e_config(p)
+    let mut ctx: Context<u8> = rav1e_config(p)
         .new_context()
         .map_err(|e| Error::EncodingError(format!("Invalid Config: {}", e.to_string())))?;
     let mut frame = ctx.new_frame();
