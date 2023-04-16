@@ -7,51 +7,36 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{background:#222;color:#eee;font:12pt monospace;height:100%}
 body{min-height:100%;display:flex;flex-wrap:wrap;align-items:start;gap:1em;padding:1em}
-
 </style>
 </head>
 <body>
 <script type="module">
-const blob=await(await fetch('jellyfish_small.jpg')).blob();
-// const resizeQuality='high';
-// const resizeWidth=1080;
-// const resizeHeight=720;
-// const image=await createImageBitmap(blob,{resizeQuality,resizeWidth,resizeHeight});
 const canvas=new OffscreenCanvas(1,1);
-const url=URL.createObjectURL(blob);
 const image=new Image();
 await new Promise((r)=>{
   image.onload=r;
-  image.src=url;
+  image.src='jellyfish.jpg';
 });
 canvas.width=image.width;
 canvas.height=image.height;
 const context=canvas.getContext('2d');
 context.drawImage(image,0,0);
 const data=context.getImageData(0,0,canvas.width,canvas.height);
-// const tmp=new Blob([data.data],{type:'application/octet-stream'});
-// const a=document.createElement('a');
-// a.download='data.bin';
-// a.href=URL.createObjectURL(tmp);
-// a.textContent='Download';
-// document.body.appendChild(a);
 const {avif}=await import('./avif.mjs');
-// const mod=await import('./avif.js');
-// const {avif_from_imagedata:avif}=await mod.default();
-// const rgba=new Uint8Array(0);
 const rgba=new Uint8Array(data.data);
 const quality=50.0;
-const t0=Date.now();
 for (const speed of [10,9,8,7,6,5,4,3,2,1]){
   const t=Date.now();
-  const bytes=await avif(rgba,data.width,data.height,false,quality,speed);
-  console.log(`original: ${blob.size}, avif: ${bytes.length}, speed: ${speed}, time: ${((Date.now()-t)/1000).toFixed(1)}`);
+  const bytes=await avif(rgba,data.width,data.height,quality,speed);
+  console.log(`avif: ${bytes.length}, speed: ${speed}, time: ${((Date.now()-t)/1000).toFixed(1)}`);
   const b=new Blob([bytes],{type:'image/avif'});
+  const link=document.createElement('a');
+  link.download=`jellyfish_s${speed}.avif`;
   const img=document.createElement('img');
-  img.src=URL.createObjectURL(b);
-  document.body.appendChild(img);
-};
-URL.revokeObjectURL(url);
+  link.href=img.src=URL.createObjectURL(b);
+  link.appendChild(img);
+  document.body.appendChild(link);
+}
 </script>
 </body>
 </html>

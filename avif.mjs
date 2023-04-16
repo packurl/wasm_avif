@@ -13,12 +13,12 @@ const src=()=>`(async()=>{
   };
   const wasm=(await WebAssembly.instantiate(mod,imports)).exports;
   const malloc=wasm.__wbindgen_malloc;const free=wasm.__wbindgen_free;
-  const fn=({data,width,height,hdr,quality,speed})=>{
+  const fn=({data,width,height,quality,speed})=>{
     try{
       const r=wasm.__wbindgen_add_to_stack_pointer(-16);
       const n1=data.length;const p1=malloc(n1);
       new Uint8Array(wasm.memory.buffer).set(data,p1);
-      wasm.avif_from_imagedata(r,p1,n1,width,height,hdr,quality,speed);
+      wasm.avif_from_imagedata(r,p1,n1,width,height,quality,speed);
       const arr=new Int32Array(wasm.memory.buffer);
       const p2=arr[r/4];const n2=arr[r/4+1];
       const res=new Uint8Array(wasm.memory.buffer).subarray(p2,p2+n2).slice();
@@ -41,21 +41,20 @@ const worker=await new Promise(r=>{
   };
 });
 /**
- * Brotli-Decompresses the supplied data.
+ * Encodes the supplied ImageData rgba array.
  * @param {Uint8Array} data
  * @param {number} width
  * @param {number} height
- * @param {boolean} hdr
  * @param {number} quality
  * @param {number} speed
  * @return {Promise<Uint8Array>}
  */
-const avif=(data,width,height, hdr=false, quality=50,speed=6)=>new Promise(r=>{
+const avif=(data,width,height, quality=50,speed=6)=>new Promise(r=>{
   worker.onmessage=msg=>{
     worker.onmessage=null;
-    r(msg.data,width,height,hdr,quality,speed);
+    r(msg.data);
   }
-  worker.postMessage({data,width,height,hdr,quality,speed});
+  worker.postMessage({data,width,height,quality,speed});
 });
 
 export {

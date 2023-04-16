@@ -1,17 +1,14 @@
 use crate::error::Error;
 use rav1e::prelude::*;
 
-/// Encoder config builder
 pub struct Encoder {
-    /// 0-255 scale
+    // 0-255
     quantizer: u8,
-    /// rav1e preset 1 (slow) 10 (fast but crappy)
+    // rav1e preset 1 (slow) 10 (fast but crappy)
     speed: u8,
 }
 
-/// Builder methods
 impl Encoder {
-    /// Start here
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -20,7 +17,7 @@ impl Encoder {
         }
     }
 
-    /// Quality `1..=100`. Panics if out of range.
+    // Quality `1..=100`. Panics if out of range.
     #[must_use]
     pub fn with_quality(mut self, quality: f32) -> Self {
         assert!(quality >= 1. && quality <= 100.);
@@ -28,8 +25,8 @@ impl Encoder {
         self
     }
 
-    /// `1..=10`. 1 = very very slow, but max compression.
-    /// 10 = quick, but larger file sizes and lower quality.
+    // `1..=10`. 1 = very very slow, but max compression.
+    // 10 = quick, but larger file sizes and lower quality.
     #[must_use]
     pub fn with_speed(mut self, speed: u8) -> Self {
         assert!(speed >= 1 && speed <= 10);
@@ -38,53 +35,26 @@ impl Encoder {
     }
 }
 
-/// Once done with config, call one of the `encode_*` functions
 impl Encoder {
-    /// Make a new AVIF image from RGB pixels
-    ///
-    /// Make the `Img` for the `buffer` like this:
-    ///
-    /// ```rust,ignore
-    /// Img::new(&pixels_rgb[..], width, height)
-    /// ```
-    ///
-    /// If you have pixels as `u8` slice, then first do:
-    ///
-    /// ```rust,ignore
-    /// use rgb::ComponentSlice;
-    /// let pixels_rgb = pixels_u8.as_rgb();
-    /// ```
-    ///
-    /// returns AVIF file
     pub fn encode_rgb<'a>(
         &'a self,
         width: usize,
         height: usize,
-        bit_depth: u8,
         pixels: impl Iterator<Item = &'a [u8]> + Send + Sync,
     ) -> Result<Vec<u8>, Error> {
         let planes = pixels.map(|px| {
-            let (y, u, v) = rgb_to_ycbcr(px, bit_depth, BT601);
+            let (y, u, v) = rgb_to_ycbcr(px, BT601);
             [y, u, v]
         });
         self.encode_raw_planes(
             width,
             height,
             planes,
-            // PixelRange::Full,
             PixelRange::Full,
             MatrixCoefficients::BT601,
-            bit_depth,
         )
     }
 
-    /// Encodes AVIF from 3 planar channels that are in the color space described by `matrix_coefficients`,
-    /// with sRGB transfer characteristics and color primaries.
-    ///
-    /// Alpha always uses full range. Chroma subsampling is not supported, and it's a bad idea for AVIF anyway.
-    /// If there's no alpha, use `None::<[_; 0]>`.
-    ///
-    /// returns AVIF file
     fn encode_raw_planes<P: rav1e::Pixel + Default>(
         &self,
         width: usize,
@@ -92,7 +62,6 @@ impl Encoder {
         planes: impl IntoIterator<Item = [P; 3]> + Send,
         color_pixel_range: PixelRange,
         matrix_coefficients: MatrixCoefficients,
-        bit_depth: u8,
     ) -> Result<Vec<u8>, Error> {
         let color_description = Some(ColorDescription {
             transfer_characteristics: TransferCharacteristics::SRGB,
@@ -105,7 +74,6 @@ impl Encoder {
                 &Av1EncodeConfig {
                     width,
                     height,
-                    bit_depth: bit_depth.into(),
                     quantizer: self.quantizer.into(),
                     speed: SpeedTweaks::from_my_preset(self.speed, self.quantizer),
                     pixel_range: color_pixel_range,
@@ -118,34 +86,23 @@ impl Encoder {
         let color = encode_color()?;
         let avif_file = avif_serialize::Aviffy::new()
             .matrix_coefficients(match matrix_coefficients {
-                MatrixCoefficients::Identity => avif_serialize::constants::MatrixCoefficients::Rgb,
-                MatrixCoefficients::BT709 => avif_serialize::constants::MatrixCoefficients::Bt709,
-                MatrixCoefficients::Unspecified => {
-                    avif_serialize::constants::MatrixCoefficients::Unspecified
-                }
                 MatrixCoefficients::BT601 => avif_serialize::constants::MatrixCoefficients::Bt601,
-                MatrixCoefficients::YCgCo => avif_serialize::constants::MatrixCoefficients::Ycgco,
-                MatrixCoefficients::BT2020NCL => {
-                    avif_serialize::constants::MatrixCoefficients::Bt2020Ncl
+                _ => {
+                    return Err(Error::Unsupported("matrix coefficients"));
                 }
-                MatrixCoefficients::BT2020CL => {
-                    avif_serialize::constants::MatrixCoefficients::Bt2020Cl
-                }
-                _ => return Err(Error::Unsupported("matrix coefficients")),
             })
-            .to_vec(&color, None, width as u32, height as u32, bit_depth);
+            .to_vec(&color, None, width as u32, height as u32, 8);
         Ok(avif_file)
     }
 }
 
-// const REC709: [f32; 3] = [0.2126, 0.7152, 0.0722];
 const BT601: [f32; 3] = [0.2990, 0.5870, 0.1140];
 
-fn rgb_to_ycbcr(px: &[u8], depth: u8, matrix: [f32; 3]) -> (u8, u8, u8) {
+fn rgb_to_ycbcr(px: &[u8], matrix: [f32; 3]) -> (u8, u8, u8) {
     let r = f32::from(px[0]);
     let g = f32::from(px[1]);
     let b = f32::from(px[2]);
-    let max_value = ((1 << depth) - 1) as f32;
+    let max_value = ((1 << 8) - 1) as f32;
     let scale = max_value / 255.;
     let shift = (max_value * 0.5).round();
     let y = scale * matrix[0] * r + scale * matrix[1] * g + scale * matrix[2] * b;
@@ -319,7 +276,6 @@ impl SpeedTweaks {
 struct Av1EncodeConfig {
     pub width: usize,
     pub height: usize,
-    pub bit_depth: usize,
     pub quantizer: usize,
     pub speed: SpeedTweaks,
     pub pixel_range: PixelRange,
@@ -340,7 +296,7 @@ fn rav1e_config(p: &Av1EncodeConfig) -> Config {
         height: p.height,
         time_base: Rational::new(1, 1),
         sample_aspect_ratio: Rational::new(1, 1),
-        bit_depth: p.bit_depth,
+        bit_depth: 8,
         chroma_sampling: p.chroma_sampling,
         chroma_sample_position: ChromaSamplePosition::Unknown,
         pixel_range: p.pixel_range,
