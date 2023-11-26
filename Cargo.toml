@@ -1,6 +1,6 @@
 [package]
 name = "avif"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [lib]
@@ -12,8 +12,10 @@ avif-serialize = "0.8"
 rav1e = { version = "0.6.6", default-features = false, features = ["wasm"] }
 
 [profile.release]
+debug = false
 opt-level = "s"
 lto = true
+#panic = "abort"
 
 [dev-dependencies]
 jpeg-decoder = "0.3"

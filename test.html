@@ -22,7 +22,7 @@ canvas.height=image.height;
 const context=canvas.getContext('2d');
 context.drawImage(image,0,0);
 const data=context.getImageData(0,0,canvas.width,canvas.height);
-const {avif}=await import('./avif.mjs');
+const {avif}=await import('./avif_worker.mjs');
 const rgba=new Uint8Array(data.data);
 const quality=50.0;
 for (const speed of [10,9,8,7,6,5,4,3,2,1]){
