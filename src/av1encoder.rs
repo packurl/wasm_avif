@@ -20,7 +20,7 @@ impl Encoder {
     // Quality `1..=100`. Panics if out of range.
     #[must_use]
     pub fn with_quality(mut self, quality: f32) -> Self {
-        assert!(quality >= 1. && quality <= 100.);
+        debug_assert!(quality >= 1. && quality <= 100.);
         self.quantizer = quality_to_quantizer(quality);
         self
     }
@@ -29,7 +29,7 @@ impl Encoder {
     // 10 = quick, but larger file sizes and lower quality.
     #[must_use]
     pub fn with_speed(mut self, speed: u8) -> Self {
-        assert!(speed >= 1 && speed <= 10);
+        debug_assert!(speed >= 1 && speed <= 10);
         self.speed = speed;
         self
     }
@@ -254,7 +254,7 @@ impl SpeedTweaks {
             }
         };
         if let Some((min, max)) = self.partition_range {
-            assert!(min <= max);
+            debug_assert!(min <= max);
             fn sz(s: u8) -> BlockSize {
                 match s {
                     4 => BlockSize::BLOCK_4X4,

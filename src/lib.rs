@@ -29,7 +29,7 @@ pub fn avif_from_imagedata(
         .with_quality(quality)
         .with_speed(speed)
         .encode_rgb(width, height, rgba.chunks_exact(4))
-        .map_err(|e| log(format!("{:?}", e).as_str()))
+        .map_err(|e| log(format!("{e:?}").as_str()))
         .unwrap()
 }
 

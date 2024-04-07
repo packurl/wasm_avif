@@ -15,7 +15,7 @@ const canvas=new OffscreenCanvas(1,1);
 const image=new Image();
 await new Promise((r)=>{
   image.onload=r;
-  image.src='jellyfish.jpg';
+  image.src='./jellyfish.jpg';
 });
 canvas.width=image.width;
 canvas.height=image.height;
@@ -25,11 +25,11 @@ const data=context.getImageData(0,0,canvas.width,canvas.height);
 const {avif}=await import('./avif_worker.mjs');
 const rgba=new Uint8Array(data.data);
 const quality=50.0;
-for (const speed of [10,9,8,7,6,5,4,3,2,1]){
+for(const speed of [10,9,8,7,6,5,4,3,2,1]){
   const t=Date.now();
   const bytes=await avif(rgba,data.width,data.height,quality,speed);
   console.log(`avif: ${bytes.length}, speed: ${speed}, time: ${((Date.now()-t)/1000).toFixed(1)}`);
-  const b=new Blob([bytes],{type:'image/avif'});
+  const b=new Blob([bytes],{type: 'image/avif'});
   const link=document.createElement('a');
   link.download=`jellyfish_s${speed}.avif`;
   const img=document.createElement('img');
