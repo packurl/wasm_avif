@@ -2,7 +2,7 @@ const url=new URL('avif.wasm',import.meta.url);
 let wasm;
 const imports={
   wbg: {
-    __wbg_log_aa11a1e72555df69: (p,n)=>{
+    __wbg_log_c7ab787585a0044f: (p,n)=>{
       console.log(new TextDecoder().decode(new Uint8Array(wasm.memory.buffer).subarray(p,p+n)));
     },
     __wbindgen_init_externref_table:function(){
