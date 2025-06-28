@@ -9,29 +9,28 @@ pub struct Encoder {
 }
 
 impl Encoder {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            quantizer: quality_to_quantizer(80.),
-            speed: 5,
-        }
-    }
-
     // Quality `1..=100`. Panics if out of range.
-    #[must_use]
     pub fn with_quality(mut self, quality: f32) -> Self {
-        debug_assert!(quality >= 1. && quality <= 100.);
+        debug_assert!((1. ..=100.).contains(&quality));
         self.quantizer = quality_to_quantizer(quality);
         self
     }
 
     // `1..=10`. 1 = very very slow, but max compression.
     // 10 = quick, but larger file sizes and lower quality.
-    #[must_use]
     pub fn with_speed(mut self, speed: u8) -> Self {
-        debug_assert!(speed >= 1 && speed <= 10);
+        debug_assert!((1..=10).contains(&speed));
         self.speed = speed;
         self
+    }
+}
+
+impl Default for Encoder {
+    fn default() -> Self {
+        Self {
+            quantizer: quality_to_quantizer(80.),
+            speed: 5,
+        }
     }
 }
 
@@ -263,7 +262,7 @@ impl SpeedTweaks {
                     32 => BlockSize::BLOCK_32X32,
                     64 => BlockSize::BLOCK_64X64,
                     128 => BlockSize::BLOCK_128X128,
-                    _ => panic!("bad size {}", s),
+                    _ => panic!("bad size {s}"),
                 }
             }
             speed_settings.partition.partition_range = PartitionRange::new(sz(min), sz(max));
@@ -363,12 +362,12 @@ fn encode_to_av1(
 ) -> Result<Vec<u8>, Error> {
     let mut ctx: Context<u8> = rav1e_config(p)
         .new_context()
-        .map_err(|e| Error::EncodingError(format!("Invalid Config: {}", e.to_string())))?;
+        .map_err(|e| Error::Encoding(format!("Invalid Config: {e}")))?;
     let mut frame = ctx.new_frame();
 
     init(&mut frame)?;
     ctx.send_frame(frame)
-        .map_err(|e| Error::EncodingError(format!("Send Frame: {}", e.to_string())))?;
+        .map_err(|e| Error::Encoding(format!("Send Frame: {e}")))?;
     ctx.flush();
 
     let mut out = Vec::new();
@@ -381,8 +380,7 @@ fn encode_to_av1(
                 _ => continue,
             },
             Err(EncoderStatus::Encoded) | Err(EncoderStatus::LimitReached) => break,
-            Err(err) => Err(err)
-                .map_err(|e| Error::EncodingError(format!("Receive Packet: {}", e.to_string())))?,
+            Err(err) => Err(err).map_err(|e| Error::Encoding(format!("Receive Packet: {e}")))?,
         }
     }
     Ok(out)

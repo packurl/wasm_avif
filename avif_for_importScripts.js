@@ -2,7 +2,7 @@ const avif=(async()=>{
   let wasm;
   const imports={
     wbg: {
-      __wbg_log_c7ab787585a0044f: (p,n)=>{
+      __wbg_log_53027a77be2f101a: (p,n)=>{
         console.log(new TextDecoder().decode(new Uint8Array(wasm.memory.buffer).subarray(p,p+n)));
       },
       __wbindgen_init_externref_table:function(){

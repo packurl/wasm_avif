@@ -11,9 +11,10 @@ extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
+#[allow(dead_code)]
 #[cfg(not(target_arch = "wasm32"))]
 fn log(s: &str) {
-    println!("{}", s);
+    println!("{s}");
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -25,7 +26,7 @@ pub fn avif_from_imagedata(
     quality: f32,
     speed: u8,
 ) -> Vec<u8> {
-    Encoder::new()
+    Encoder::default()
         .with_quality(quality)
         .with_speed(speed)
         .encode_rgb(width, height, rgba.chunks_exact(4))
@@ -48,7 +49,7 @@ mod tests {
         let height = decoder.info().unwrap().height as usize;
         let quality = 50.0;
         let speed = 6;
-        let bytes = Encoder::new()
+        let bytes = Encoder::default()
             .with_quality(quality)
             .with_speed(speed)
             .encode_rgb(width, height, rgb.chunks_exact(3))

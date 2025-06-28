@@ -1,7 +1,7 @@
 [package]
 name = "avif"
-version = "0.6.0"
-edition = "2021"
+version = "0.6.1"
+edition = "2024"
 
 [lib]
 crate-type = ["cdylib",'rlib']
@@ -9,12 +9,13 @@ crate-type = ["cdylib",'rlib']
 [dependencies]
 wasm-bindgen = "0.2"
 avif-serialize = "0.8"
-rav1e = { version = "0.8.0", default-features = false, features = ["wasm"] }
+rav1e = { version = "0.8.1", default-features = false, features = ["wasm"] }
 
 [profile.release]
 debug = false
 opt-level = "s"
 lto = true
+codegen-units = 1
 #panic = "abort"
 
 [dev-dependencies]
