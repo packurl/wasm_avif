@@ -7,7 +7,7 @@ pub use av1encoder::Encoder;
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-extern "C" {
+unsafe extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
