@@ -16,12 +16,20 @@ include = [
 ]
 
 [lib]
-crate-type = ["cdylib",'rlib']
+crate-type = ["cdylib","rlib"]
 
-[dependencies]
-wasm-bindgen = "0.2"
-avif-serialize = "0.8"
-rav1e = { version = "0.8.1", default-features = false, features = ["wasm"] }
+[dependencies.wasm-bindgen]
+version = "0.2"
+
+[dependencies.avif-serialize]
+version = "0.8"
+default-features = false
+features = []
+
+[dependencies.rav1e]
+version = "0.8.1"
+default-features = false
+features = ["wasm"]
 
 [profile.release]
 debug = false
