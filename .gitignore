@@ -1,4 +1,5 @@
 /target/
+/pkg/
 **/*.rs.bk
 Cargo.lock
 jellyfish_small.avif

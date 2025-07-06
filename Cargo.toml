@@ -1,7 +1,19 @@
 [package]
-name = "avif"
+name = "wasm_avif"
 version = "0.6.1"
 edition = "2024"
+authors = ["Jerome David <programingjd@gmail.com>"]
+categories = ["wasm","compression"]
+description = "esm modules for avif image compression, with sync and async (worker) versions"
+keywords = ["wasm", "avif", "esm"]
+license = "BSD-3-Clause"
+repository = "https://github.com/packurl/wasm_avif"
+include = [
+    "Cargo.toml", "src", "LICENSE", "README.md", "rust-toolchain.toml",
+    "avif.d.ts", "avif.mjs", "avif.wasm",
+    "avif_worker.d.ts", "avif_worker.mjs", "avif_worker_script.mjs",
+    "avif_worker_script.js", "avif_for_importScripts.js"
+]
 
 [lib]
 crate-type = ["cdylib",'rlib']
