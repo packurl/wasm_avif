@@ -26,6 +26,7 @@ const avif=(bytes,width,height,quality=50,speed=6)=>{
   const ptr_and_len=new DataView(wasm.memory.buffer,r,8);
   const p2=ptr_and_len.getUint32(0,true);
   const n2=ptr_and_len.getUint32(4,true);
+  free(ptr_and_len,8);
   const res=new Uint8Array(wasm.memory.buffer).subarray(p2,p2+n2).slice();
   free(p2,n2);
   return res;
