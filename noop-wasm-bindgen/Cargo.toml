@@ -1,0 +1,9 @@
+[package]
+name = "wasm-bindgen"
+version = "0.2.118"
+edition = "2024"
+
+[dependencies.noop_proc_macro]
+version = "0.3"
+default-features = false
+features = []

@@ -3,3 +3,5 @@
 **/*.rs.bk
 Cargo.lock
 jellyfish_small.avif
+wasm-opt
+wasm-opt.exe

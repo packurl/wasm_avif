@@ -1,6 +1,6 @@
 [package]
 name = "wasm_avif"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["wasm","compression"]
@@ -18,9 +18,6 @@ include = [
 [lib]
 crate-type = ["cdylib","rlib"]
 
-[dependencies.wasm-bindgen]
-version = "0.2"
-
 [dependencies.avif-serialize]
 version = "0.8"
 default-features = false
@@ -29,14 +26,13 @@ features = []
 [dependencies.rav1e]
 version = "0.8.1"
 default-features = false
-features = ["wasm"]
+#features = ["wasm"]
+
+[patch.crates-io]
+wasm-bindgen = { path = "noop-wasm-bindgen" }
 
 [profile.release]
-debug = false
 opt-level = "s"
 lto = true
 codegen-units = 1
-#panic = "abort"
 
-[dev-dependencies]
-jpeg-decoder = "0.3"

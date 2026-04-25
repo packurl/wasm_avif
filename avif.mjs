@@ -1,25 +1,14 @@
 const url=new URL('avif.wasm',import.meta.url);
 let wasm;
 const imports={
-  wbg: {
-    __wbg_log_53027a77be2f101a: (p,n)=>{
-      console.log(new TextDecoder().decode(new Uint8Array(wasm.memory.buffer).subarray(p,p+n)));
-    },
-    __wbindgen_init_externref_table:function(){
-      const table=wasm.__wbindgen_export_0;
-      const offset=table.grow(4);
-      table.set(0);
-      table.set(offset);
-      table.set(offset+1,null);
-      table.set(offset+2,true);
-      table.set(offset+3,false);
-    }
+  js: {
+    println:(ptr,len)=>console.log(new TextDecoder().decode(new Uint8Array(wasm.memory.buffer,ptr,len)))
   }
 };
 const {instance}=await WebAssembly.instantiateStreaming(await fetch(url,{cache: 'force-cache'}),imports);
 wasm=instance.exports;
-const malloc=wasm.__wbindgen_malloc;
-const free=wasm.__wbindgen_free;
+const malloc=wasm.malloc;
+const free=wasm.free;
 /**
  * Encodes the supplied ImageData rgba array.
  * @param {Uint8Array} bytes
@@ -33,7 +22,10 @@ const avif=(bytes,width,height,quality=50,speed=6)=>{
   const n1=bytes.length;
   const p1=malloc(n1,1);
   new Uint8Array(wasm.memory.buffer).set(bytes,p1);
-  const [p2,n2]=wasm.avif_from_imagedata(p1,n1,width,height,quality,speed);
+  const r=wasm.avif_from_imagedata(p1,n1,width,height,quality,speed);
+  const ptr_and_len=new DataView(wasm.memory.buffer,r,8);
+  const p2=ptr_and_len.getUint32(0,true);
+  const n2=ptr_and_len.getUint32(4,true);
   const res=new Uint8Array(wasm.memory.buffer).subarray(p2,p2+n2).slice();
   free(p2,n2);
   return res;

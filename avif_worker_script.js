@@ -1,8 +1,9 @@
 importScripts('./avif_for_importScripts.js');
 (async()=>{
   const fn=await avif;
-  onmessage=async msg=>{
-    postMessage(fn(msg.data.bytes,msg.data.width,msg.data.height,msg.data.quality,msg.data.speed));
+  onmessage=async({data:{bytes,width,height,quality,speed}})=>{
+    const res=fn(bytes,width,height,quality,speed);
+    postMessage(res,[res.buffer]);
   }
   postMessage('ready');
 })();

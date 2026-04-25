@@ -18,14 +18,15 @@ const worker=await new Promise(r=>{
  * @param {number} height
  * @param {number} quality (1 to 100)
  * @param {number} speed (1 to 10)
+ * @param {boolean} [transfer=false]
  * @return {Promise<Uint8Array>}
  */
-const avif=(bytes,width,height,quality=50,speed=6)=>new Promise(r=>{
+const avif=(bytes,width,height,quality=50,speed=6,transfer=false)=>new Promise(r=>{
   worker.onmessage=msg=>{
     worker.onmessage=null;
     r(msg.data);
   }
-  worker.postMessage({bytes,width,height,quality,speed});
+  worker.postMessage({bytes,width,height,quality,speed},transfer?[bytes.buffer]:undefined);
 });
 
 export {avif};

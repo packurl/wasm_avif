@@ -112,8 +112,8 @@ fn rgb_to_ycbcr(px: &[u8], matrix: [f32; 3]) -> (u8, u8, u8) {
 
 fn quality_to_quantizer(quality: f32) -> u8 {
     let q = quality / 100.;
-    let x = if q >= 0.85 {
-        (1. - q) * 3.
+    let x = if q >= 0.82 {
+        (1. - q) * 2.6
     } else if q > 0.25 {
         1. - 0.125 - q * 0.5
     } else {

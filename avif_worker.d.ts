@@ -8,8 +8,11 @@ declare module 'avif_worker' {
    * @param {number} height
    * @param {number} [quality=50] (1 to 100)
    * @param {number} [speed=6] (1 to 10)
+   * @param {boolean} [transfer=false]
    * @return {Promise<Uint8Array>}
    */
-  export function avif(bytes: Uint8Array, width: number, height: number, quality: number, speed: number): Promise<Uint8Array>;
+  export function avif(
+    bytes: Uint8Array, width: number, height: number, quality: number, speed: number, transfer: boolean
+  ): Promise<Uint8Array>;
   export default avif;
 }
